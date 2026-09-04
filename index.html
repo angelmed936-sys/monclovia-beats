@@ -1,1 +1,114 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Monclova Beats</title><style>body{background:#0a0a0a;color:#fff;font-family:sans-serif;margin:0;padding:20px}h1{color:#ff0055;text-align:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;max-width:1000px;margin:auto}.card{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:15px}audio{width:100%;margin:10px 0}button{padding:10px;border-radius:8px;width:100%;cursor:pointer;font-weight:700;border:0;margin-top:5px}.buy{background:#ff0055;color:#fff}.del{background:#222;color:#ff4444;border:1px solid #ff444422}</style></head><body><h1>🎧 MONCLOVA BEATS</h1><div class="grid" id="tienda"></div><script>async function cargar(){let r=await fetch('/api/beats');let beats=await r.json();document.getElementById('tienda').innerHTML=beats.map(b=>`<div class="card"><h3>${b.Nombre}</h3><p>${b.BPM} BPM - $${b.Precio} MXN</p><audio controls src="${b.Audio}"></audio><button class="buy" onclick="alert('Comprar ${b.Nombre}')">COMPRAR</button><button class="del" onclick="borrar(${b.ID})">🗑️ BORRAR</button></div>`).join('')}async function borrar(id){if(!confirm('¿Borrar este beat?'))return;await fetch('/api/beats/'+id,{method:'DELETE'});cargar()}cargar()</script></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monclovia Beats</title>
+<style>
+body { background:#0a0a0a; color:white; font-family:Arial; margin:0; padding:20px; }
+.header { display:flex; justify-content:space-between; align-items:center; }
+.beat { background:#1a1a1a; padding:15px; margin:10px 0; border-radius:10px; display:flex; justify-content:space-between; }
+.btn { background:#ff0055; border:none; color:white; padding:8px 15px; border-radius:5px; cursor:pointer; }
+.btn-admin { background:#333; }
+#loginBox { background:#1a1a1a; padding:20px; border-radius:10px; max-width:300px; margin:50px auto; text-align:center; }
+input { width:90%; padding:10px; margin:5px 0; border-radius:5px; border:none; }
+#adminPanel { display:none; background:#1a1a1a; padding:15px; border-radius:10px; margin-top:20px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎧 Monclovia Beats</h1>
+  <button id="btnLogin" class="btn btn-admin" onclick="mostrarLogin()">Admin Login</button>
+  <button id="btnLogout" class="btn btn-admin" style="display:none" onclick="logout()">Salir (monclovia)</button>
+</div>
+
+<div id="loginBox" style="display:none">
+  <h3>Login Admin</h3>
+  <input id="user" placeholder="Usuario" value="monclovia"><br>
+  <input id="pass" type="password" placeholder="Contraseña" value="monclovia123"><br>
+  <button class="btn" onclick="login()">Entrar</button>
+  <p id="loginMsg"></p>
+</div>
+
+<div id="adminPanel">
+  <h3>Subir Beat (Solo Admin)</h3>
+  <input id="beatTitle" placeholder="Nombre del beat">
+  <input id="beatFile" type="file">
+  <button class="btn" onclick="alert('Aquí va tu lógica de subida')">Subir</button>
+</div>
+
+<h2>Beats</h2>
+<div id="listaBeats">Cargando beats...</div>
+
+<script>
+const API = ""; // en Render funciona así
+let isAdmin = localStorage.getItem("isAdmin") === "true";
+
+function mostrarLogin(){
+  document.getElementById("loginBox").style.display = isAdmin ? "none" : "block";
+}
+
+async function login(){
+  const user = document.getElementById("user").value;
+  const pass = document.getElementById("pass").value;
+  try {
+    const res = await fetch("/api/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({user, pass})
+    });
+    const data = await res.json();
+    if(res.ok && data.ok){
+      isAdmin = true;
+      localStorage.setItem("isAdmin", "true");
+      document.getElementById("loginBox").style.display="none";
+      document.getElementById("adminPanel").style.display="block";
+      document.getElementById("btnLogin").style.display="none";
+      document.getElementById("btnLogout").style.display="block";
+      document.getElementById("loginMsg").innerText="";
+    } else {
+      document.getElementById("loginMsg").innerText="Usuario o contraseña mal";
+    }
+  } catch(e){
+    document.getElementById("loginMsg").innerText="Error de servidor";
+  }
+}
+
+function logout(){
+  isAdmin=false;
+  localStorage.removeItem("isAdmin");
+  document.getElementById("adminPanel").style.display="none";
+  document.getElementById("btnLogin").style.display="block";
+  document.getElementById("btnLogout").style.display="none";
+}
+
+async function cargarBeats(){
+  try {
+    const res = await fetch("/api/beats");
+    const beats = await res.json();
+    const div = document.getElementById("listaBeats");
+    if(!beats || beats.length===0){
+      div.innerHTML="<p>No hay beats aún. ¡Loguéate como admin y sube uno!</p>";
+      return;
+    }
+    div.innerHTML="";
+    beats.forEach(b=>{
+      div.innerHTML+=`<div class="beat"><span>${b.title || b.Title || 'Beat sin nombre'}</span><audio controls src="${b.url || b.URL}"></audio></div>`;
+    });
+  } catch(e){
+    document.getElementById("listaBeats").innerHTML="Error cargando beats - ¿La API está caída? Ve a /api/beats";
+  }
+}
+
+// Al cargar la página
+if(isAdmin){
+  document.getElementById("adminPanel").style.display="block";
+  document.getElementById("btnLogin").style.display="none";
+  document.getElementById("btnLogout").style.display="block";
+}
+cargarBeats();
+</script>
+
+</body>
+</html>
